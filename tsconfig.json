@@ -1,0 +1,11 @@
+{
+  "files": [],
+  "references": [
+    { "path": "packages/core" },
+    { "path": "packages/discord-adapter" },
+    { "path": "packages/renderer-legacy" },
+    { "path": "packages/renderer-v2" },
+    { "path": "packages/components" },
+    { "path": "packages/themes" }
+  ]
+}
