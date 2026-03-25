@@ -34,5 +34,6 @@ export function createObsidianApp(config: AppConfig): ObsidianApp {
     screens,
     getScreen: (id: string) => screens.get(id),
     theme,
+    renderer: config.renderer,
   };
 }

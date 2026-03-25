@@ -15,11 +15,12 @@ export type {
   ScreenOutput,
   ActionContext,
   SessionAccessor,
-  ScreenDefinition,
   ScreenConfig,
+  ScreenDefinition,
   AppConfig,
   ObsidianApp,
-  RendererContract,
+  Renderer,
+  RenderPayload,
 } from './types.js';
 
 export { createObsidianApp } from './app.js';

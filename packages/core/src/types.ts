@@ -98,6 +98,7 @@ export interface ScreenOutput {
 }
 
 export interface ActionContext {
+  screenId: string;
   actionId: string;
   source: InteractionSource;
   userId: string;
@@ -123,8 +124,9 @@ export interface SessionAccessor {
   clear(): void;
 }
 
-export interface ScreenDefinition {
+export interface ScreenConfig {
   id: string;
+  stateScope?: StateScope;
   render: (ctx: ActionContext) => ScreenOutput | Promise<ScreenOutput>;
   actions?: Record<string, (ctx: ActionContext) => void | Promise<void>>;
   onMount?: (ctx: ActionContext) => void | Promise<void>;
@@ -132,18 +134,31 @@ export interface ScreenDefinition {
   onUnmount?: (ctx: ActionContext) => void | Promise<void>;
 }
 
-export interface ScreenConfig {
+export interface ScreenDefinition {
   id: string;
+  stateScope: StateScope;
   render: (ctx: ActionContext) => ScreenOutput | Promise<ScreenOutput>;
-  actions?: Record<string, (ctx: ActionContext) => void | Promise<void>>;
+  actions: Record<string, (ctx: ActionContext) => void | Promise<void>>;
   onMount?: (ctx: ActionContext) => void | Promise<void>;
   onRefresh?: (ctx: ActionContext) => void | Promise<void>;
   onUnmount?: (ctx: ActionContext) => void | Promise<void>;
+}
+
+export interface RenderPayload {
+  data: unknown;
+  modal?: unknown;
+  ephemeral?: boolean;
+}
+
+export interface Renderer {
+  render(output: ScreenOutput, theme: ThemeTokens): RenderPayload;
+  buildModal(modal: UIModal): unknown;
 }
 
 export interface AppConfig {
   theme?: ThemeTokens;
   screens: ScreenDefinition[];
+  renderer: Renderer;
   sessionTTL?: number;
 }
 
@@ -152,8 +167,5 @@ export interface ObsidianApp {
   screens: Map<string, ScreenDefinition>;
   getScreen: (id: string) => ScreenDefinition | undefined;
   theme: ThemeTokens;
-}
-
-export interface RendererContract {
-  renderScreen: (output: ScreenOutput, theme: ThemeTokens) => unknown;
+  renderer: Renderer;
 }

@@ -38,6 +38,43 @@ importers:
       '@obsidian-ui/discord-adapter':
         specifier: workspace:*
         version: link:../../packages/discord-adapter
+      '@obsidian-ui/renderer-legacy':
+        specifier: workspace:*
+        version: link:../../packages/renderer-legacy
+      '@obsidian-ui/themes':
+        specifier: workspace:*
+        version: link:../../packages/themes
+      discord.js:
+        specifier: ^14.16.0
+        version: 14.25.1
+      dotenv:
+        specifier: ^16.4.0
+        version: 16.6.1
+    devDependencies:
+      tsup:
+        specifier: ^8.1.0
+        version: 8.5.1(postcss@8.5.8)(tsx@4.21.0)(typescript@5.9.3)
+      tsx:
+        specifier: ^4.7.0
+        version: 4.21.0
+      typescript:
+        specifier: ^5.5.0
+        version: 5.9.3
+
+  examples/settings-dashboard:
+    dependencies:
+      '@obsidian-ui/components':
+        specifier: workspace:*
+        version: link:../../packages/components
+      '@obsidian-ui/core':
+        specifier: workspace:*
+        version: link:../../packages/core
+      '@obsidian-ui/discord-adapter':
+        specifier: workspace:*
+        version: link:../../packages/discord-adapter
+      '@obsidian-ui/renderer-legacy':
+        specifier: workspace:*
+        version: link:../../packages/renderer-legacy
       '@obsidian-ui/themes':
         specifier: workspace:*
         version: link:../../packages/themes
@@ -69,6 +106,9 @@ importers:
       '@obsidian-ui/discord-adapter':
         specifier: workspace:*
         version: link:../../packages/discord-adapter
+      '@obsidian-ui/renderer-legacy':
+        specifier: workspace:*
+        version: link:../../packages/renderer-legacy
       '@obsidian-ui/themes':
         specifier: workspace:*
         version: link:../../packages/themes

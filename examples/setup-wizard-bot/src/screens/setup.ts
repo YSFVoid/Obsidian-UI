@@ -1,6 +1,5 @@
 import {
   createScreen,
-  type ActionContext,
   type ScreenOutput,
   buildActionId,
 } from '@obsidian-ui/core';
@@ -8,8 +7,8 @@ import {
   renderWizardStep,
   handleWizardAction,
   createConfirmDialog,
-  createSuccessResult,
-  createErrorResult,
+  createSuccessState,
+  createErrorState,
   type WizardConfig,
 } from '@obsidian-ui/components';
 
@@ -163,11 +162,11 @@ export const setupScreen = createScreen({
     },
 
     wizard_cancel(ctx) {
-      const errorOutput = createErrorResult(
-        'Setup Cancelled',
-        'The setup wizard was cancelled. Run `/setup` to start again.',
-      );
-      ctx.respond(errorOutput, 'update');
+      const output = createErrorState({
+        title: 'Setup Cancelled',
+        message: 'The setup wizard was cancelled. Run `/setup` to start again.',
+      });
+      ctx.respond(output, 'update');
     },
 
     wizard_input(ctx) {
@@ -184,13 +183,14 @@ export const setupScreen = createScreen({
     },
 
     confirm(ctx) {
-      const successOutput = createSuccessResult(
-        'Configuration Applied',
-        'Your server has been configured successfully.\n\n' +
-        `**Server:** ${ctx.state.get<string>('server_name') ?? 'Unknown'}\n` +
-        `**Auto-Mod:** ${ctx.state.get<string>('auto_mod') ?? 'Unknown'}`,
-      );
-      ctx.respond(successOutput, 'update');
+      const output = createSuccessState({
+        title: 'Configuration Applied',
+        message:
+          'Your server has been configured successfully.\n\n' +
+          `**Server:** ${ctx.state.get<string>('server_name') ?? 'Unknown'}\n` +
+          `**Auto-Mod:** ${ctx.state.get<string>('auto_mod') ?? 'Unknown'}`,
+      });
+      ctx.respond(output, 'update');
     },
 
     cancel(ctx) {
@@ -204,8 +204,7 @@ export const setupScreen = createScreen({
         ctx.state.set('server_description', ctx.modalValues['server_description'] ?? '');
       }
       const stepIndex = ctx.state.get<number>('wizardStep') ?? 0;
-      const next = stepIndex + 1;
-      ctx.state.set('wizardStep', next);
+      ctx.state.set('wizardStep', stepIndex + 1);
       ctx.refreshScreen();
     },
 
@@ -215,8 +214,7 @@ export const setupScreen = createScreen({
         ctx.state.set('warn_threshold', ctx.modalValues['warn_threshold'] ?? '');
       }
       const stepIndex = ctx.state.get<number>('wizardStep') ?? 0;
-      const next = stepIndex + 1;
-      ctx.state.set('wizardStep', next);
+      ctx.state.set('wizardStep', stepIndex + 1);
       ctx.refreshScreen();
     },
   },

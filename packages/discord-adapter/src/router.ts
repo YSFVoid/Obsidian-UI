@@ -1,8 +1,17 @@
-import type { ObsidianApp, ActionContext, ScreenOutput, ResponseMode, UIModal } from '@obsidian-ui/core';
+import type {
+  ObsidianApp,
+  ActionContext,
+  ScreenOutput,
+  ScreenDefinition,
+  ResponseMode,
+  UIModal,
+  StateScope,
+  Renderer,
+} from '@obsidian-ui/core';
 import { parseActionId, resolveAction, invokeLifecycle, SessionStore } from '@obsidian-ui/core';
 import type { Interaction } from 'discord.js';
 import { normalizeInteraction, type NormalizedInteraction } from './interactions.js';
-import { sendResponse, buildModal } from './response.js';
+import { sendPayload } from './response.js';
 
 export class InteractionRouter {
   private app: ObsidianApp;
@@ -28,14 +37,15 @@ export class InteractionRouter {
     const screen = this.app.getScreen(normalized.actionId);
     if (!screen) return false;
 
-    const ctx = this.buildContext(normalized);
+    const ctx = this.buildContext(normalized, screen);
 
     if (screen.onMount) {
       await invokeLifecycle(screen.onMount, ctx);
     }
 
     const output = await screen.render(ctx);
-    await sendResponse(normalized.raw, output, this.app.theme, 'reply');
+    const payload = this.app.renderer.render(output, this.app.theme);
+    await sendPayload(normalized.raw, payload, 'reply');
     return true;
   }
 
@@ -47,7 +57,7 @@ export class InteractionRouter {
     if (!screen) return false;
 
     const handler = resolveAction(screen, parsed.action);
-    const ctx = this.buildContext(normalized);
+    const ctx = this.buildContext(normalized, screen);
 
     if (handler) {
       await handler(ctx);
@@ -56,11 +66,25 @@ export class InteractionRouter {
     return true;
   }
 
-  private buildContext(normalized: NormalizedInteraction): ActionContext {
-    const state = this.sessions.getAccessor('user', normalized.userId);
+  private resolveStateId(scope: StateScope, normalized: NormalizedInteraction): string {
+    switch (scope) {
+      case 'user': return normalized.userId;
+      case 'channel': return normalized.channelId;
+      case 'guild': return normalized.guildId ?? normalized.channelId;
+      case 'message': return normalized.messageId ?? normalized.userId;
+    }
+  }
+
+  private buildContext(normalized: NormalizedInteraction, screen: ScreenDefinition): ActionContext {
+    const stateId = this.resolveStateId(screen.stateScope, normalized);
+    const state = this.sessions.getAccessor(screen.stateScope, stateId);
     const interaction = normalized.raw;
+    const renderer = this.app.renderer;
+    const theme = this.app.theme;
+    const screenId = screen.id;
 
     const ctx: ActionContext = {
+      screenId,
       actionId: normalized.actionId,
       source: normalized.source,
       userId: normalized.userId,
@@ -71,9 +95,10 @@ export class InteractionRouter {
       modalValues: normalized.modalValues,
       state,
       raw: interaction,
-      openScreen: async (screenId: string, params?: Record<string, unknown>) => {
-        const screen = this.app.getScreen(screenId);
-        if (!screen) throw new Error(`Screen not found: ${screenId}`);
+
+      openScreen: async (targetScreenId: string, params?: Record<string, unknown>) => {
+        const targetScreen = this.app.getScreen(targetScreenId);
+        if (!targetScreen) throw new Error(`Screen not found: ${targetScreenId}`);
 
         if (params) {
           for (const [k, v] of Object.entries(params)) {
@@ -81,43 +106,37 @@ export class InteractionRouter {
           }
         }
 
-        if (screen.onMount) await invokeLifecycle(screen.onMount, ctx);
-        const output = await screen.render(ctx);
-        await sendResponse(interaction, output, this.app.theme, 'reply');
+        if (targetScreen.onMount) await invokeLifecycle(targetScreen.onMount, ctx);
+        const output = await targetScreen.render(ctx);
+        const payload = renderer.render(output, theme);
+        await sendPayload(interaction, payload, 'reply');
       },
-      refreshScreen: async () => {
-        const parsed = parseActionId(normalized.actionId);
-        const screenId = parsed?.screenId ?? normalized.actionId;
-        const screen = this.app.getScreen(screenId);
-        if (!screen) return;
 
+      refreshScreen: async () => {
         if (screen.onRefresh) await invokeLifecycle(screen.onRefresh, ctx);
         const output = await screen.render(ctx);
-        await sendResponse(interaction, output, this.app.theme, 'update');
+        const payload = renderer.render(output, theme);
+        await sendPayload(interaction, payload, 'update');
       },
+
       closeScreen: async () => {
-        const parsed = parseActionId(normalized.actionId);
-        const screenId = parsed?.screenId ?? normalized.actionId;
-        const screen = this.app.getScreen(screenId);
+        if (screen.onUnmount) await invokeLifecycle(screen.onUnmount, ctx);
 
-        if (screen?.onUnmount) await invokeLifecycle(screen.onUnmount, ctx);
-
-        if ((interaction as any).update) {
-          await (interaction as any).update({
-            content: '',
-            embeds: [],
-            components: [],
-          });
+        if ('update' in interaction && typeof (interaction as any).update === 'function') {
+          await (interaction as any).update({ content: '', embeds: [], components: [] });
         }
       },
+
       showModal: async (modal: UIModal) => {
-        const discordModal = buildModal(modal);
-        if ((interaction as any).showModal) {
-          await (interaction as any).showModal(discordModal);
+        const built = renderer.buildModal(modal);
+        if (built && 'showModal' in interaction && typeof (interaction as any).showModal === 'function') {
+          await (interaction as any).showModal(built);
         }
       },
+
       respond: async (output: ScreenOutput, mode?: ResponseMode) => {
-        await sendResponse(interaction, output, this.app.theme, mode ?? 'reply');
+        const payload = renderer.render(output, theme);
+        await sendPayload(interaction, payload, mode ?? 'reply');
       },
     };
 

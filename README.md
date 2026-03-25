@@ -2,7 +2,7 @@
 
 Premium Discord app UI runtime framework. Build app-like Discord interfaces with screens, stateful flows, reusable components, and renderer abstraction.
 
-**Version:** 0.1.0 (Foundation Release)
+**Version:** 0.2.0
 
 ---
 
@@ -11,11 +11,19 @@ Premium Discord app UI runtime framework. Build app-like Discord interfaces with
 Obsidian UI is a TypeScript framework for building structured, interactive Discord bot UIs. It provides:
 
 - **Screen system** — define UI screens with render functions, action handlers, and lifecycle hooks
+- **Renderer abstraction** — pluggable renderers (legacy embed-based, v2 Components) implement a shared interface
 - **Interaction routing** — normalize slash commands, buttons, selects, and modals into a single action model
-- **Session state** — in-memory scoped state with TTL and cleanup
-- **Renderer abstraction** — legacy embed-based renderer + v2 renderer contract for future surfaces
-- **UI components** — Card, Paginator, ConfirmDialog, and Wizard primitives
+- **Session state** — scoped in-memory state (user/channel/guild/message) with TTL and cleanup
+- **UI components** — 12 reusable primitives for common Discord UI patterns
 - **Theme system** — token-based theming with presets
+
+## v0.2 Changes from v0.1
+
+- **Renderer separation** — rendering logic moved from adapter into renderer packages; adapter is now a thin dispatcher
+- **Configurable state scope** — screens declare `stateScope` (user/channel/guild/message) instead of hardcoded user scope
+- **Screen runtime** — `screenId` tracked on ActionContext; navigation no longer depends on fragile action ID parsing
+- **8 new primitives** — Tabs, ActionBar, StatsGrid, EmptyState, LoadingState, ErrorState, SuccessState, SettingsPanel
+- **Cleaner contracts** — proper `Renderer` interface, `RenderPayload` type, no duplicate type definitions
 
 ## Repo Structure
 
@@ -23,14 +31,15 @@ Obsidian UI is a TypeScript framework for building structured, interactive Disco
 obsidian-ui/
 ├── packages/
 │   ├── core/                  # Framework contracts, screen/action/session models
-│   ├── discord-adapter/       # discord.js integration layer
-│   ├── renderer-legacy/       # Embed-based renderer
-│   ├── renderer-v2/           # Future surface renderer (v0.1 stub)
-│   ├── components/            # Card, Paginator, ConfirmDialog, Wizard
+│   ├── discord-adapter/       # discord.js interaction routing and dispatch
+│   ├── renderer-legacy/       # Embed-based renderer (implements Renderer)
+│   ├── renderer-v2/           # Components V2 renderer (implements Renderer)
+│   ├── components/            # 12 reusable UI primitives
 │   └── themes/                # Theme tokens and presets
 ├── examples/
 │   ├── leaderboard-bot/       # Paginated leaderboard with Cards
-│   └── setup-wizard-bot/      # Multi-step wizard with modals and confirm
+│   ├── setup-wizard-bot/      # Multi-step wizard with modals and confirm
+│   └── settings-dashboard/    # Tabbed settings with StatsGrid and SettingsPanel
 ├── package.json
 ├── pnpm-workspace.yaml
 ├── tsconfig.base.json
@@ -41,11 +50,11 @@ obsidian-ui/
 
 | Package | Description |
 |---------|-------------|
-| `@obsidian-ui/core` | Screen definitions, action contracts, session store, lifecycle hooks, app factory |
-| `@obsidian-ui/discord-adapter` | Normalize discord.js interactions → framework actions, response handling |
-| `@obsidian-ui/renderer-legacy` | Convert screen output to Discord embeds + action rows |
-| `@obsidian-ui/renderer-v2` | Future renderer contract for Components V2 / Activities |
-| `@obsidian-ui/components` | Card, Paginator, ConfirmDialog, Wizard UI primitives |
+| `@obsidian-ui/core` | Screen definitions, action contracts, session store, lifecycle hooks, Renderer interface |
+| `@obsidian-ui/discord-adapter` | Normalize discord.js interactions, route to screens, dispatch render payloads |
+| `@obsidian-ui/renderer-legacy` | Convert ScreenOutput → discord.js embeds + action rows + modals |
+| `@obsidian-ui/renderer-v2` | Convert ScreenOutput → Components V2 containers |
+| `@obsidian-ui/components` | Card, Paginator, ConfirmDialog, Wizard, Tabs, ActionBar, StatsGrid, EmptyState, LoadingState, ErrorState, SuccessState, SettingsPanel |
 | `@obsidian-ui/themes` | Theme tokens, `defineTheme` factory, obsidian/neon presets |
 
 ## Core API
@@ -53,11 +62,12 @@ obsidian-ui/
 ```typescript
 import { createObsidianApp, createScreen } from '@obsidian-ui/core';
 import { createDiscordAdapter } from '@obsidian-ui/discord-adapter';
-import { createPaginator, createConfirmDialog } from '@obsidian-ui/components';
+import { LegacyRenderer } from '@obsidian-ui/renderer-legacy';
 import { obsidianTheme } from '@obsidian-ui/themes';
 
 const screen = createScreen({
   id: 'myscreen',
+  stateScope: 'guild',
   render(ctx) {
     return {
       embeds: [{ title: 'Hello', description: 'World' }],
@@ -74,6 +84,7 @@ const screen = createScreen({
 
 const app = createObsidianApp({
   theme: obsidianTheme,
+  renderer: new LegacyRenderer(),
   screens: [screen],
 });
 ```
@@ -82,8 +93,9 @@ const app = createObsidianApp({
 
 | Method | Description |
 |--------|-------------|
-| `ctx.state.get(key)` | Read session state |
-| `ctx.state.set(key, value)` | Write session state |
+| `ctx.screenId` | Current screen ID |
+| `ctx.state.get(key)` | Read scoped session state |
+| `ctx.state.set(key, value)` | Write scoped session state |
 | `ctx.state.has(key)` | Check state key exists |
 | `ctx.state.delete(key)` | Remove state key |
 | `ctx.openScreen(id, params?)` | Navigate to a screen |
@@ -107,6 +119,7 @@ pnpm dev              # Watch mode for all packages
 cp .env.example .env  # Fill in your bot credentials
 pnpm --filter leaderboard-bot dev
 pnpm --filter setup-wizard-bot dev
+pnpm --filter settings-dashboard dev
 ```
 
 ## Environment Variables
@@ -117,18 +130,17 @@ pnpm --filter setup-wizard-bot dev
 | `DISCORD_CLIENT_ID` | Application client ID |
 | `DISCORD_GUILD_ID` | Guild ID for command registration |
 
-## v0.1 Scope
+## Scope
 
 ### Included
-- Screen system with render + action handlers + lifecycle
+- Screen system with configurable state scopes and lifecycle
+- Pluggable renderer architecture (legacy + v2)
 - Interaction router (slash, button, select, modal)
 - In-memory session state with scopes and TTL
 - discord.js adapter
-- Legacy embed-based renderer
-- V2 renderer contract (stub)
-- Theme system with obsidian and neon presets
-- Card, Paginator, ConfirmDialog, Wizard components
-- Leaderboard and Setup Wizard example bots
+- 12 UI primitives
+- 3 working example bots
+- Theme system with presets
 
 ### Not Included
 - Discord Activities implementation
@@ -136,8 +148,6 @@ pnpm --filter setup-wizard-bot dev
 - Plugin marketplace
 - Multi-adapter support
 - Database persistence
-- Auth dashboard
-- Business logic (economy, moderation, music)
 
 ## License
 

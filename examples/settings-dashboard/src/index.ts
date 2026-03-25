@@ -4,7 +4,7 @@ import { createObsidianApp } from '@obsidian-ui/core';
 import { createDiscordAdapter } from '@obsidian-ui/discord-adapter';
 import { LegacyRenderer } from '@obsidian-ui/renderer-legacy';
 import { obsidianTheme } from '@obsidian-ui/themes';
-import { setupScreen } from './screens/setup.js';
+import { settingsScreen } from './screens/settings.js';
 
 const token = process.env.DISCORD_TOKEN!;
 const clientId = process.env.DISCORD_CLIENT_ID!;
@@ -13,7 +13,7 @@ const guildId = process.env.DISCORD_GUILD_ID!;
 const app = createObsidianApp({
   theme: obsidianTheme,
   renderer: new LegacyRenderer(),
-  screens: [setupScreen],
+  screens: [settingsScreen],
 });
 
 const client = new Client({
@@ -26,8 +26,8 @@ async function registerCommands() {
   const rest = new REST().setToken(token);
   const commands = [
     new SlashCommandBuilder()
-      .setName('setup')
-      .setDescription('Run the server setup wizard'),
+      .setName('settings')
+      .setDescription('Open the server settings dashboard'),
   ];
 
   await rest.put(Routes.applicationGuildCommands(clientId, guildId), {
@@ -36,7 +36,7 @@ async function registerCommands() {
 }
 
 client.once('ready', () => {
-  console.log(`[setup-wizard-bot] Online as ${client.user?.tag}`);
+  console.log(`[settings-dashboard] Online as ${client.user?.tag}`);
 });
 
 async function main() {

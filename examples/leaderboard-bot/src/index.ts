@@ -2,6 +2,7 @@ import 'dotenv/config';
 import { Client, GatewayIntentBits, REST, Routes, SlashCommandBuilder } from 'discord.js';
 import { createObsidianApp } from '@obsidian-ui/core';
 import { createDiscordAdapter } from '@obsidian-ui/discord-adapter';
+import { LegacyRenderer } from '@obsidian-ui/renderer-legacy';
 import { obsidianTheme } from '@obsidian-ui/themes';
 import { leaderboardScreen } from './screens/leaderboard.js';
 
@@ -11,6 +12,7 @@ const guildId = process.env.DISCORD_GUILD_ID!;
 
 const app = createObsidianApp({
   theme: obsidianTheme,
+  renderer: new LegacyRenderer(),
   screens: [leaderboardScreen],
 });
 

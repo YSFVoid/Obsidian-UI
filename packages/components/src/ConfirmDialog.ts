@@ -1,4 +1,4 @@
-import type { UIEmbed, UIActionRow, UIActionButton, ScreenOutput } from '@obsidian-ui/core';
+import type { UIEmbed, UIActionRow, UIActionButton } from '@obsidian-ui/core';
 
 export interface ConfirmDialogConfig {
   screenId: string;
@@ -49,27 +49,5 @@ export function createConfirmDialog(config: ConfirmDialogConfig): ConfirmDialogR
   return {
     embed,
     actionRow: { actions: [confirmButton, cancelButton] },
-  };
-}
-
-export function createSuccessResult(title: string, description: string, color?: number): ScreenOutput {
-  return {
-    embeds: [{
-      title: `✅ ${title}`,
-      description,
-      color: color ?? 0x57f287,
-    }],
-    actionRows: [],
-  };
-}
-
-export function createErrorResult(title: string, description: string, color?: number): ScreenOutput {
-  return {
-    embeds: [{
-      title: `❌ ${title}`,
-      description,
-      color: color ?? 0xed4245,
-    }],
-    actionRows: [],
   };
 }
